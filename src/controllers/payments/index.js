@@ -27,18 +27,18 @@ function revealMysteryItems(user) {
 
 exports.createSubscription = function(data, cb) {
   var recipient = data.gift ? data.gift.member : data.user;
-  if (!recipient.purchased.plan) recipient.purchased.plan = {};
+  //if (!recipient.purchased.plan) recipient.purchased.plan = {}; // FIXME double-check, this should never be the case
   var p = recipient.purchased.plan;
-  var giftMonths = data.gift ? data.gift.subscription.months : 0
+  var months = data.gift ? data.gift.subscription.months : data.sub.months;
   _(p).merge({ // override with these values
-    planId:'basic_earned',
+    planId: data.sub.key,
     customerId: data.customerId,
     dateUpdated: new Date(),
     gemsBought: 0,
     paymentMethod: data.paymentMethod,
     extraMonths: +p.extraMonths
       + +(p.dateTerminated ? moment(p.dateTerminated).diff(new Date(),'months',true) : 0)
-      + +(giftMonths),
+      + +(data.gift ? months : 0),
     dateTerminated: null
   }).defaults({ // allow non-override if a plan was previously used
     dateCreated: new Date(),
@@ -46,11 +46,12 @@ exports.createSubscription = function(data, cb) {
   });
 
   // Block sub perks
-  if (giftMonths) {
-    p.consecutive.offset += giftMonths;
-    p.consecutive.gemCapExtra += giftMonths*5;
+  var perks = Math.floor(months/3);
+  if (perks) {
+    p.consecutive.offset += months;
+    p.consecutive.gemCapExtra += perks*5;
     if (p.consecutive.gemCapExtra > 25) p.consecutive.gemCapExtra = 25;
-    p.consecutive.trinkets += giftMonths;
+    p.consecutive.trinkets += perks;
   }
 
   revealMysteryItems(recipient);
